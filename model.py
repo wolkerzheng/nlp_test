@@ -82,7 +82,7 @@ def initTransition(status,cols):
     #         tmp[j] = 0
     #     tranMat[i] = tmp
     # print 'succ'
-    with open('transition.txt','r') as f:
+    with open('new_transition.txt','r') as f:
         lines = f.readlines()
 
         for line in lines:
@@ -201,7 +201,7 @@ def getPinyin():
 
 def hmm_viterbi(oberation,startdic,tranMat,emission,pinyin,status):
     """
-
+    需要改善
     :param oberation:
     :param startdic:
     :param tranMat:
@@ -211,9 +211,11 @@ def hmm_viterbi(oberation,startdic,tranMat,emission,pinyin,status):
     :return:
     """
 
-    topK = 10
+    topK = 15
     hmmstatus = {}
     hmmpath =[]
+    hmmtmpPath = {}
+
     for i in range(len(oberation)):
         #根据观测的拼音看有哪些状态
         pyIndex = pinyin.index(oberation[i])
@@ -225,37 +227,50 @@ def hmm_viterbi(oberation,startdic,tranMat,emission,pinyin,status):
         # nowStatusDict = dict(sorted(nowStatusDict.items(),key=lambda item:item[1],reverse=True)[0:topK])
         # print nowStatusDict
 
-        startPi = 1 /float(len(nowStatusDict))
+        startPi = np.log(1 /float(len(nowStatusDict)))
         if i==0: #起始
             tmpDict = {}
             for k,v in nowStatusDict.items():
-
-                tmpDict[k] = v *  startPi      #发射概率*起始概率
+                tmpDict[k] = -v * startdic[k]
+                # tmpDict[k] = -startPi *  startPi      #发射概率*起始概率
             tmpStatus = sorted(tmpDict.items(),key=lambda item:item[1],reverse=True)
 
-            if len(tmpStatus) >= topK:
-                hmmstatus[i] = tmpStatus[0:topK]
-            else:
-                hmmstatus[i] = tmpStatus[0:len(tmpStatus)]
-            # hmmstatus[i] = tmpStatus
+            # if len(tmpStatus) >= topK:
+            #     hmmstatus[i] = tmpStatus[0:topK]
+            # else:
+            #     hmmstatus[i] = tmpStatus[0:len(tmpStatus)]
+            hmmstatus[i] = tmpStatus
         else:
             tmpDict = {}
             # print hmmstatus[i-1]
-
+            # maxTmp = -10000000
+            tmpddd = hmmtmpPath.get(i,{})
             for k, v in nowStatusDict.items():
-
+                # print k
                 for (sta,prob) in hmmstatus[i-1]:
+                    # print sta
                     # print tranMat[sta][k]
-                    if k not in tranMat[sta].keys() or sta not in tranMat.keys(): continue
+                    #  = hmmtmpPath[i]
+                    if sta not in tranMat.keys() or k not in tranMat[sta].keys():
+                        # tmpddd[k] = sta
+                        continue
+
                     if k not in tmpDict:
+                        tmpDict[k] = prob * tranMat[sta][k]*v
+                        tmpddd[k] = sta
+                    elif prob * tranMat[sta][k]*startPi > tmpDict[k]:
 
-                        tmpDict[k] = prob*tranMat[sta][k]* v
-
-                    elif  prob*tranMat[sta][k]* v > tmpDict[k]:
-                        tmpDict[k] = prob * tranMat[sta][k] * v
+                        tmpDict[k] = prob * tranMat[sta][k]*v
+                        tmpddd[k] = sta
+                    #     tmpDict[k] = prob*tranMat[sta][k]* v
+                    #
+                    # elif  prob*tranMat[sta][k]* v > tmpDict[k]:
+                    #
+                    #     tmpDict[k] = prob * tranMat[sta][k] * v
                 # for k, v in tmpDict.items():
                 #         print k, v
 
+            hmmtmpPath[i]=tmpddd
             if tmpDict=={}:
 
                 tmpDict = nowStatusDict
@@ -270,18 +285,25 @@ def hmm_viterbi(oberation,startdic,tranMat,emission,pinyin,status):
             else:
                 hmmstatus[i] = tmpStatus[0:len(tmpStatus)]
             # hmmstatus[i] = tmpStatus
+    # print hmmtmpPath
+    # print hmmstatus
+    n = len(oberation)
+    k = hmmstatus[n-1][0][0]
+    i=n
+    while len(hmmpath)!= n:
+        i = i-1
+        hmmpath.insert(0,k)
+        if i!=0:
+            k = hmmtmpPath[i][k]
 
-    for i in range(len((hmmstatus))):
-        hs = hmmstatus[i]
-        # print i,hs[0][0]
-        hmmpath.append(hs[0][0])
+    # for i in range(len((hmmstatus)),1,-1):
+    #     hs = hmmstatus[i]
+    #     # print i,hs[0][0]
+    #     hmmpath.append(hs[0][0])
 
     return "".join(hmmpath)
 
 
-
-
-    pass
 
 if __name__ == '__main__':
     startTime = time.time()
