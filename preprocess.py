@@ -61,6 +61,26 @@ def wordSaveToTxt(wordFreq,bigramFr):
             f.write("%s\t%d\n"%(key,bigramFr[key]))
     print "writing bigram SUCCESS!"
     pass
+def cleanTransition(lex):
+
+    words = lex.keys()
+    str = "&".join(words)
+    tranDict = {}
+    with open('transition.txt','r') as f:
+        lines = f.readlines()
+
+        for line in lines:
+
+            tmpline = line.strip().split('\t')
+            # if tmpline[0][0:3] not in status or tmpline[0][3:6] not in status:continue
+            if len(tmpline[0]) < 6: continue
+            if tmpline[0] in str:
+                tranDict[tmpline[0]] = int(tmpline[-1])
+
+
+    with open('new_transition.txt','w') as f:
+        for k, v in sorted(tranDict.items(), key=lambda item: item[1], reverse=True):
+            f.write("%s\t%d\n" % (k, v))
 
 if __name__ == '__main__':
 
